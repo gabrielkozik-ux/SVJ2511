@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hlasovací Systém SVJ - v3.0</title>
+    <title>Hlasovací Systém SVJ - v3.1</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -12,6 +12,17 @@
         .checkbox-xl { transform: scale(1.6); cursor: pointer; }
         .modal { transition: opacity 0.25s ease; }
         body.modal-active { overflow: hidden; }
+        
+        /* Print styles for the minutes report */
+        .minutes-preview {
+            font-family: 'Times New Roman', serif;
+            line-height: 1.5;
+            color: black;
+        }
+        .minutes-preview h1 { font-size: 16pt; text-align: center; font-weight: bold; margin-bottom: 1em; }
+        .minutes-preview h2 { font-size: 12pt; font-weight: bold; margin-top: 1em; margin-bottom: 0.5em; }
+        .minutes-preview p { margin-bottom: 0.8em; text-align: justify; }
+        .minutes-preview .result-box { border: 1px solid #ccc; padding: 5px; background: #f9f9f9; font-family: sans-serif; font-size: 0.9em; }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen pb-20">
@@ -32,14 +43,16 @@
                         </select>
                     </div>
                     
-                    <!-- Amendment Button -->
                     <button onclick="openAmendmentModal()" class="whitespace-nowrap bg-orange-500 hover:bg-orange-600 text-white text-xs md:text-sm font-bold py-2 px-3 rounded shadow border border-orange-600 flex items-center gap-1">
                         <i class="fas fa-pen-fancy"></i> Navrhnout změnu
                     </button>
+                    
+                    <button onclick="openMinutesModal()" class="whitespace-nowrap bg-purple-600 hover:bg-purple-700 text-white text-xs md:text-sm font-bold py-2 px-3 rounded shadow border border-purple-700 flex items-center gap-1">
+                        <i class="fas fa-file-word"></i> Generovat Zápis
+                    </button>
 
-                     <!-- Legal Help Button -->
                      <button onclick="toggleModal('legal-modal')" class="whitespace-nowrap bg-gray-600 hover:bg-gray-700 text-white text-xs md:text-sm font-bold py-2 px-3 rounded shadow flex items-center gap-1">
-                        <i class="fas fa-balance-scale"></i> Právní tahák
+                        <i class="fas fa-balance-scale"></i>
                     </button>
                 </div>
 
@@ -54,7 +67,7 @@
                 </div>
             </div>
             
-            <!-- Context Sub-header (shows specifically what we are voting on NOW) -->
+            <!-- Context Sub-header -->
             <div class="container mx-auto mt-2 pt-2 border-t border-blue-800 flex justify-between items-center">
                 <div class="font-mono text-sm text-blue-200">
                     Hlasujeme o: <span id="current-voting-title" class="font-bold text-white text-lg">...</span>
@@ -117,27 +130,17 @@
 
     <!-- Main Grid -->
     <div class="container mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
         <!-- Left Column: Voting Table -->
         <div class="lg:col-span-2 space-y-4">
-            
             <!-- Quick Tools -->
             <div class="flex justify-between items-center bg-white p-3 rounded shadow-sm border border-gray-200">
                 <div class="flex gap-2">
-                    <button onclick="toggleAllPresence(true)" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-1.5 rounded transition border border-gray-300">
-                        Všichni přítomni
-                    </button>
-                    <button onclick="toggleAllPresence(false)" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-1.5 rounded transition border border-gray-300">
-                        Nikdo
-                    </button>
+                    <button onclick="toggleAllPresence(true)" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-1.5 rounded transition border border-gray-300">Všichni přítomni</button>
+                    <button onclick="toggleAllPresence(false)" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-1.5 rounded transition border border-gray-300">Nikdo</button>
                 </div>
                 <div class="flex gap-2">
-                    <button onclick="toggleAllVotes(true)" class="text-xs bg-blue-50 hover:bg-blue-100 text-blue-800 px-3 py-1.5 rounded transition font-bold border border-blue-200">
-                        Všichni PRO
-                    </button>
-                    <button onclick="toggleAllVotes(false)" class="text-xs bg-red-50 hover:bg-red-100 text-red-800 px-3 py-1.5 rounded transition border border-red-200">
-                        Zrušit hlasy
-                    </button>
+                    <button onclick="toggleAllVotes(true)" class="text-xs bg-blue-50 hover:bg-blue-100 text-blue-800 px-3 py-1.5 rounded transition font-bold border border-blue-200">Všichni PRO</button>
+                    <button onclick="toggleAllVotes(false)" class="text-xs bg-red-50 hover:bg-red-100 text-red-800 px-3 py-1.5 rounded transition border border-red-200">Zrušit hlasy</button>
                 </div>
             </div>
 
@@ -149,17 +152,11 @@
                             <th class="p-3 w-10 text-center">#</th>
                             <th class="p-3">Vlastník</th>
                             <th class="p-3 w-20 text-center">Podíl</th>
-                            <th class="p-3 w-24 text-center bg-gray-700 cursor-pointer" onclick="toggleAllPresence(true)">
-                                <i class="fas fa-walking"></i> Přít.
-                            </th>
-                            <th class="p-3 w-24 text-center bg-blue-900 cursor-pointer" onclick="toggleAllVotes(true)">
-                                <i class="fas fa-vote-yea"></i> PRO
-                            </th>
+                            <th class="p-3 w-24 text-center bg-gray-700 cursor-pointer" onclick="toggleAllPresence(true)"><i class="fas fa-walking"></i> Přít.</th>
+                            <th class="p-3 w-24 text-center bg-blue-900 cursor-pointer" onclick="toggleAllVotes(true)"><i class="fas fa-vote-yea"></i> PRO</th>
                         </tr>
                     </thead>
-                    <tbody id="owners-table" class="divide-y divide-gray-200 text-sm">
-                        <!-- JS Generated -->
-                    </tbody>
+                    <tbody id="owners-table" class="divide-y divide-gray-200 text-sm"></tbody>
                 </table>
             </div>
         </div>
@@ -172,9 +169,7 @@
                     <button onclick="clearHistory()" class="text-xs text-red-400 hover:text-red-600">Smazat</button>
                 </div>
                 <div class="max-h-[600px] overflow-y-auto p-0 bg-gray-50">
-                    <div id="history-list" class="divide-y divide-gray-200">
-                        <!-- History Items -->
-                    </div>
+                    <div id="history-list" class="divide-y divide-gray-200"></div>
                 </div>
             </div>
         </div>
@@ -186,23 +181,71 @@
         <div class="modal-container bg-white w-11/12 md:max-w-md mx-auto rounded shadow-lg z-50 overflow-y-auto">
             <div class="modal-content py-4 text-left px-6">
                 <div class="flex justify-between items-center pb-3">
-                    <p class="text-2xl font-bold text-orange-600">Nový pozměňovací návrh</p>
-                    <div class="cursor-pointer z-50" onclick="closeAmendmentModal()">
-                        <i class="fas fa-times"></i>
-                    </div>
+                    <p class="text-2xl font-bold text-orange-600">Pozměňovací návrh</p>
+                    <div class="cursor-pointer z-50" onclick="closeAmendmentModal()"><i class="fas fa-times"></i></div>
                 </div>
                 <div class="my-5">
-                    <p class="text-sm text-gray-600 mb-2">Jak zní navrhovaná změna?</p>
-                    <textarea id="amendment-text" class="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-orange-500" rows="3" placeholder="Např.: V článku 5 změnit částku na 2000 Kč..."></textarea>
-                    
-                    <p class="text-sm text-gray-600 mt-4 mb-2">Vyžadované kvórum pro změnu:</p>
+                    <textarea id="amendment-text" class="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-orange-500" rows="3" placeholder="Znění změny..."></textarea>
+                    <p class="text-sm text-gray-600 mt-4 mb-2">Kvórum:</p>
                     <select id="amendment-threshold" class="w-full p-2 border border-gray-300 rounded bg-gray-50">
-                        <option value="50">Nadpoloviční většina přítomných (>50%) - Standard</option>
-                        <option value="75">Tříčtvrteční většina (>75%) - Bezpečnější</option>
+                        <option value="50">Nadpoloviční většina přítomných (>50%)</option>
+                        <option value="75">Tříčtvrteční většina (>75%)</option>
                     </select>
                 </div>
                 <div class="flex justify-end pt-2">
-                    <button onclick="startAmendmentVoting()" class="px-4 bg-orange-500 p-3 rounded-lg text-white hover:bg-orange-600 font-bold">Zahájit hlasování o změně</button>
+                    <button onclick="startAmendmentVoting()" class="px-4 bg-orange-500 p-3 rounded-lg text-white hover:bg-orange-600 font-bold">Zahájit hlasování</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Minutes Generation -->
+    <div id="minutes-modal" class="modal opacity-0 pointer-events-none fixed w-full h-full top-0 left-0 flex items-center justify-center z-50">
+        <div class="modal-overlay absolute w-full h-full bg-gray-900 opacity-50" onclick="toggleModal('minutes-modal')"></div>
+        <div class="modal-container bg-white w-11/12 md:max-w-4xl mx-auto rounded shadow-lg z-50 overflow-y-auto max-h-[90vh]">
+            <div class="modal-content py-4 text-left px-6">
+                <div class="flex justify-between items-center pb-3 border-b">
+                    <p class="text-xl font-bold text-purple-800"><i class="fas fa-file-alt mr-2"></i>Generování Zápisu ze shromáždění</p>
+                    <button onclick="toggleModal('minutes-modal')" class="text-gray-500 hover:text-gray-800"><i class="fas fa-times fa-lg"></i></button>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
+                    <!-- Inputs -->
+                    <div class="col-span-1 space-y-3 bg-gray-50 p-4 rounded text-sm">
+                        <h3 class="font-bold text-gray-700 border-b pb-1">1. Údaje o schůzi</h3>
+                        <div>
+                            <label class="block text-gray-500 text-xs">Datum a Čas:</label>
+                            <input type="text" id="min-date" class="w-full border rounded p-1" value="27. 11. 2025, 18:00">
+                        </div>
+                        <div>
+                            <label class="block text-gray-500 text-xs">Předsedající:</label>
+                            <input type="text" id="min-chair" class="w-full border rounded p-1" value="Jan Kislenko">
+                        </div>
+                        <div>
+                            <label class="block text-gray-500 text-xs">Zapisovatel:</label>
+                            <input type="text" id="min-scribe" class="w-full border rounded p-1" value="Mgr. Gabriel Kožík">
+                        </div>
+                        <div>
+                            <label class="block text-gray-500 text-xs">Ověřovatel:</label>
+                            <input type="text" id="min-verify" class="w-full border rounded p-1" value="[Doplnit jméno]">
+                        </div>
+                        <button onclick="generateMinutesText()" class="w-full bg-purple-600 text-white py-2 rounded font-bold hover:bg-purple-700 mt-2">
+                            <i class="fas fa-sync-alt mr-1"></i> Aktualizovat náhled
+                        </button>
+                    </div>
+
+                    <!-- Preview -->
+                    <div class="col-span-2">
+                        <div class="flex justify-between items-center mb-2">
+                            <h3 class="font-bold text-gray-700">2. Náhled dokumentu</h3>
+                            <button onclick="copyMinutes()" class="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded hover:bg-blue-200">
+                                <i class="fas fa-copy mr-1"></i> Kopírovat text
+                            </button>
+                        </div>
+                        <div id="minutes-content" class="minutes-preview bg-white border border-gray-300 p-8 h-[500px] overflow-y-auto shadow-inner" contenteditable="true">
+                            <!-- Generated content will appear here -->
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -214,32 +257,12 @@
         <div class="modal-container bg-white w-11/12 md:max-w-2xl mx-auto rounded shadow-lg z-50 overflow-y-auto max-h-[90vh]">
             <div class="modal-content py-4 text-left px-6">
                 <div class="flex justify-between items-center pb-3 border-b">
-                    <p class="text-xl font-bold text-gray-800"><i class="fas fa-balance-scale mr-2"></i>Právní postup při změnách</p>
+                    <p class="text-xl font-bold text-gray-800"><i class="fas fa-balance-scale mr-2"></i>Právní postup</p>
                     <button onclick="toggleModal('legal-modal')" class="text-gray-500 hover:text-gray-800"><i class="fas fa-times fa-lg"></i></button>
                 </div>
                 <div class="my-4 text-sm text-gray-700 space-y-3">
-                    <div class="bg-yellow-50 border-l-4 border-yellow-400 p-3">
-                        <p class="font-bold">Základní pravidlo:</p>
-                        <p>Nehlasujte rovnou o "nových stanovách". Musíte se k nim propracovat přes <strong>hlasování o dílčích změnách</strong>.</p>
-                    </div>
-                    
-                    <h3 class="font-bold text-lg mt-4">Postup krok za krokem:</h3>
-                    <ol class="list-decimal pl-5 space-y-1">
-                        <li><strong>Přednesení změny:</strong> Někdo navrhne: <em>"V článku X vypustit větu Y..."</em></li>
-                        <li><strong>Hlasování o změně:</strong> Hlasuje se POUZE o této změně (většinou >50% přítomných).</li>
-                        <li><strong>Výsledek:</strong> 
-                            <ul class="list-disc pl-5 text-gray-500">
-                                <li>Pokud projde: Návrh stanov se v tomto bodě mění.</li>
-                                <li>Pokud neprojde: Zůstává původní text z pozvánky.</li>
-                            </ul>
-                        </li>
-                        <li><strong>Finální hlasování:</strong> Až se vyřeší všechny změny, hlasuje se o <strong>Stanovách jako celku</strong> (ve znění přijatých změn).</li>
-                    </ol>
-
-                    <div class="bg-red-50 border-l-4 border-red-500 p-3 mt-4">
-                        <p class="font-bold text-red-700">RIZIKO: Nepřítomní vlastníci</p>
-                        <p>Pokud změníte podstatu návrhu (např. způsob placení), může to nepřítomný vlastník napadnout u soudu, protože "hlasoval per rollam" nebo dal plnou moc pro původní text. <br><strong>Doporučení:</strong> Na schůzi dělat jen upřesňující, ne koncepční změny.</p>
-                    </div>
+                    <p>Pokud se mění stanovy, nehlasujte rovnou o celku. Hlasujte nejprve o pozměňovacích návrzích.</p>
+                    <p class="bg-yellow-100 p-2 rounded"><strong>Tip:</strong> Pro generování zápisu je nutné každé hlasování "Uzavřít".</p>
                 </div>
             </div>
         </div>
@@ -247,13 +270,16 @@
 
     <script>
         // --- DATA ---
+        // Resolutions mapped to document structure
+        // structureKey: Links resolution to the specific section in the provided DOCX template
         const initialResolutions = [
-            { id: 1, title: "1. Volba předsedy (J. Kislenko) a zapisovatele", threshold: 50 },
-            { id: 2, title: "2. Schválení nových stanov SVJ", threshold: 75, highlight: true },
-            { id: 3, title: "3. Volba výboru SVJ (5 let)", threshold: 50 },
-            { id: 4, title: "4. Schválení účetní závěrky 2024", threshold: 50 },
-            { id: 5, title: "5. Schválení výše měsíčních příspěvků", threshold: 50 },
-            { id: 6, title: "6. Schválení odměny výboru (1.000 Kč)", threshold: 50 }
+            { id: 1, title: "1. Volba předsedy (J. Kislenko) a zapisovatele", threshold: 50, structureKey: 'II' },
+            { id: 100, title: "2. Schválení programu schůze", threshold: 50, structureKey: 'III' }, // Added as per template
+            { id: 2, title: "3. Schválení nových stanov SVJ", threshold: 75, highlight: true, structureKey: 'IV' },
+            { id: 3, title: "4. Volba výboru SVJ", threshold: 50, structureKey: 'V' },
+            { id: 4, title: "5. Schválení účetní závěrky 2024", threshold: 50, structureKey: 'GENERIC' },
+            { id: 5, title: "6. Schválení výše příspěvků", threshold: 50, structureKey: 'GENERIC' },
+            { id: 6, title: "7. Schválení odměny výboru", threshold: 50, structureKey: 'GENERIC' }
         ];
 
         const owners = [
@@ -275,25 +301,24 @@
             { id: 16, unit: "497/16", name: "SJ Sláma Ladislav a Jana", share: 50 }
         ];
 
-        // --- STATE ---
-        let state = {
-            mode: 'standard', // 'standard' or 'amendment'
-            resolutions: JSON.parse(JSON.stringify(initialResolutions)), // deep copy
-            currentIndex: 0,
-            amendment: null, // { text: string, threshold: number }
-            owners: owners.map(o => ({ ...o, present: false, votedYes: false })),
-            history: []
-        };
+        const TOTAL_SHARES_ALL = 733;
 
-        // --- CORE FUNCTIONS ---
+        let state = {
+            mode: 'standard',
+            resolutions: JSON.parse(JSON.stringify(initialResolutions)),
+            currentIndex: 0,
+            amendment: null,
+            owners: owners.map(o => ({ ...o, present: false, votedYes: false })),
+            history: [] // Now will store { resolutionId, ... }
+        };
 
         function init() {
             renderResolutionSelect();
             renderTable();
             updateUI();
-            updateHistory();
         }
 
+        // --- CORE UI ---
         function renderResolutionSelect() {
             const select = document.getElementById('resolution-select');
             select.innerHTML = '';
@@ -310,64 +335,24 @@
         function renderTable() {
             const tbody = document.getElementById('owners-table');
             tbody.innerHTML = '';
-            
             state.owners.forEach((o, idx) => {
                 const tr = document.createElement('tr');
-                tr.className = o.present ? "bg-white hover:bg-gray-50 transition-colors" : "bg-gray-100 text-gray-400";
+                tr.className = o.present ? "bg-white hover:bg-gray-50" : "bg-gray-100 text-gray-400";
                 tr.innerHTML = `
                     <td class="p-3 text-center text-xs font-mono">${idx + 1}</td>
-                    <td class="p-3">
-                        <div class="font-bold text-blue-900 text-sm">${o.unit}</div>
-                        <div class="truncate max-w-[180px] text-xs" title="${o.name}">${o.name}</div>
-                    </td>
+                    <td class="p-3"><div class="font-bold text-blue-900 text-sm">${o.unit}</div><div class="text-xs">${o.name}</div></td>
                     <td class="p-3 text-center text-sm font-mono">${o.share}</td>
-                    <td class="p-3 text-center border-l bg-gray-50">
-                        <input type="checkbox" class="checkbox-lg accent-gray-600" 
-                            ${o.present ? 'checked' : ''} 
-                            onchange="setPresence(${idx}, this.checked)">
-                    </td>
-                    <td class="p-3 text-center border-l ${o.present ? 'bg-blue-50' : ''}">
-                        <input type="checkbox" class="checkbox-xl accent-blue-600 disabled:opacity-0" 
-                            ${o.votedYes ? 'checked' : ''} 
-                            ${!o.present ? 'disabled' : ''}
-                            onchange="setVote(${idx}, this.checked)">
-                    </td>
+                    <td class="p-3 text-center border-l bg-gray-50"><input type="checkbox" class="checkbox-lg accent-gray-600" ${o.present ? 'checked' : ''} onchange="setPresence(${idx}, this.checked)"></td>
+                    <td class="p-3 text-center border-l ${o.present ? 'bg-blue-50' : ''}"><input type="checkbox" class="checkbox-xl accent-blue-600 disabled:opacity-0" ${o.votedYes ? 'checked' : ''} ${!o.present ? 'disabled' : ''} onchange="setVote(${idx}, this.checked)"></td>
                 `;
                 tbody.appendChild(tr);
             });
         }
 
-        // --- VOTING LOGIC ---
-
-        function setPresence(idx, val) {
-            state.owners[idx].present = val;
-            if (!val) state.owners[idx].votedYes = false;
-            renderTable();
-            updateUI();
-        }
-
-        function setVote(idx, val) {
-            if (!state.owners[idx].present) return;
-            state.owners[idx].votedYes = val;
-            updateUI();
-        }
-
-        function toggleAllPresence(val) {
-            state.owners.forEach(o => {
-                o.present = val;
-                if (!val) o.votedYes = false;
-            });
-            renderTable();
-            updateUI();
-        }
-
-        function toggleAllVotes(val) {
-            state.owners.forEach(o => {
-                if (o.present) o.votedYes = val;
-            });
-            renderTable();
-            updateUI();
-        }
+        function setPresence(idx, val) { state.owners[idx].present = val; if(!val) state.owners[idx].votedYes = false; renderTable(); updateUI(); }
+        function setVote(idx, val) { if(!state.owners[idx].present) return; state.owners[idx].votedYes = val; updateUI(); }
+        function toggleAllPresence(val) { state.owners.forEach(o => { o.present = val; if(!val) o.votedYes = false; }); renderTable(); updateUI(); }
+        function toggleAllVotes(val) { state.owners.forEach(o => { if(o.present) o.votedYes = val; }); renderTable(); updateUI(); }
 
         function calculate() {
             const present = state.owners.reduce((acc, o) => o.present ? acc + o.share : acc, 0);
@@ -377,9 +362,8 @@
 
         function updateUI() {
             const { present, votes } = calculate();
-            
-            // Determine active config
             let currentTitle, threshold;
+            
             if (state.mode === 'amendment') {
                 currentTitle = `POZMĚŇOVACÍ NÁVRH: ${state.amendment.text}`;
                 threshold = state.amendment.threshold;
@@ -389,127 +373,68 @@
                 threshold = res.threshold;
             }
 
-            // Stats
             const percent = present > 0 ? (votes / present) * 100 : 0;
             const passed = percent > threshold;
 
             document.getElementById('current-voting-title').textContent = state.mode === 'amendment' ? "POZMĚŇOVACÍ NÁVRH" : state.resolutions[state.currentIndex].title;
             document.getElementById('present-shares').textContent = present;
             document.getElementById('yes-votes').textContent = votes;
+            document.getElementById('result-badge').textContent = percent.toFixed(1) + ' %';
+            document.getElementById('progress-bar').style.width = percent + '%';
+            document.getElementById('quorum-marker').style.left = threshold + '%';
+            document.getElementById('quorum-info').textContent = `Kvórum: > ${threshold}%`;
             
-            // Visuals
+            // Visual feedback
+            const status = document.getElementById('status-text');
             const badge = document.getElementById('result-badge');
             const bar = document.getElementById('progress-bar');
-            const status = document.getElementById('status-text');
-            const marker = document.getElementById('quorum-marker');
-            const qInfo = document.getElementById('quorum-info');
-
-            badge.textContent = percent.toFixed(1) + ' %';
-            bar.style.width = percent + '%';
-            marker.style.left = threshold + '%';
-            qInfo.textContent = `Kvórum: > ${threshold}%`;
-
+            
             if (present === 0) {
-                status.textContent = "ČEKÁNÍ"; status.className = "text-xs font-semibold px-2 py-1 rounded bg-gray-200 text-gray-500";
-                badge.className = "px-2 py-1 rounded text-white font-bold text-lg bg-gray-400";
+                status.textContent = "ČEKÁNÍ"; badge.className = "px-2 py-1 rounded text-white font-bold text-lg bg-gray-400";
                 bar.className = "h-full bg-gray-400";
             } else if (passed) {
-                status.textContent = "SCHVÁLENO"; status.className = "text-xs font-semibold px-2 py-1 rounded bg-green-200 text-green-800 animate-pulse";
-                badge.className = "px-2 py-1 rounded text-white font-bold text-lg bg-green-600 shadow";
+                status.textContent = "SCHVÁLENO"; badge.className = "px-2 py-1 rounded text-white font-bold text-lg bg-green-600 shadow";
                 bar.className = "h-full bg-green-500";
             } else {
-                status.textContent = "NEPŘIJATO"; status.className = "text-xs font-semibold px-2 py-1 rounded bg-red-200 text-red-800";
-                badge.className = "px-2 py-1 rounded text-white font-bold text-lg bg-red-500 shadow";
+                status.textContent = "NEPŘIJATO"; badge.className = "px-2 py-1 rounded text-white font-bold text-lg bg-red-500 shadow";
                 bar.className = "h-full bg-red-500";
             }
 
-            // Mode Styles
+            // Mode switching visibility
             const topBar = document.getElementById('top-bar');
-            const amInd = document.getElementById('amendment-indicator');
-            const canBtn = document.getElementById('cancel-amendment-btn');
-            
             if (state.mode === 'amendment') {
-                topBar.classList.remove('bg-blue-900');
-                topBar.classList.add('bg-orange-700');
-                amInd.classList.remove('hidden');
-                canBtn.classList.remove('hidden');
+                topBar.classList.remove('bg-blue-900'); topBar.classList.add('bg-orange-700');
+                document.getElementById('amendment-indicator').classList.remove('hidden');
+                document.getElementById('cancel-amendment-btn').classList.remove('hidden');
             } else {
-                topBar.classList.add('bg-blue-900');
-                topBar.classList.remove('bg-orange-700');
-                amInd.classList.add('hidden');
-                canBtn.classList.add('hidden');
+                topBar.classList.add('bg-blue-900'); topBar.classList.remove('bg-orange-700');
+                document.getElementById('amendment-indicator').classList.add('hidden');
+                document.getElementById('cancel-amendment-btn').classList.add('hidden');
             }
         }
-
-        // --- AMENDMENT WORKFLOW ---
-
-        function openAmendmentModal() {
-            toggleModal('amendment-modal');
-            document.getElementById('amendment-text').value = '';
-            document.getElementById('amendment-text').focus();
-        }
-
-        function closeAmendmentModal() {
-            toggleModal('amendment-modal');
-        }
-
-        function startAmendmentVoting() {
-            const text = document.getElementById('amendment-text').value;
-            const thresh = parseInt(document.getElementById('amendment-threshold').value);
-            
-            if (!text.trim()) { alert("Zadejte text změny."); return; }
-
-            state.amendment = { text, threshold: thresh };
-            state.mode = 'amendment';
-            
-            // Clear current votes for the new round
-            toggleAllVotes(false);
-            
-            closeAmendmentModal();
-            updateUI();
-        }
-
-        function cancelAmendmentMode() {
-            if (confirm("Opravdu zrušit hlasování o tomto návrhu? (Hlasy budou ztraceny)")) {
-                state.mode = 'standard';
-                state.amendment = null;
-                toggleAllVotes(false);
-                updateUI();
-            }
-        }
-
-        function changeMainResolution() {
-            if (state.mode === 'amendment') {
-                if(!confirm("Máte rozdělaný pozměňovací návrh. Chcete ho zahodit a přepnout bod?")) return;
-                state.mode = 'standard';
-            }
-            const sel = document.getElementById('resolution-select');
-            state.currentIndex = parseInt(sel.value);
-            toggleAllVotes(false);
-            updateUI();
-        }
-
-        // --- SAVING ---
 
         function saveRound() {
             const { present, votes } = calculate();
             if (present === 0) { alert("Nelze uzavřít bez přítomných."); return; }
 
             const percent = (votes / present) * 100;
-            
-            let passed, threshold, title, type;
+            let passed, threshold, title, type, resolutionId, structureKey;
 
             if (state.mode === 'amendment') {
                 threshold = state.amendment.threshold;
                 passed = percent > threshold;
                 title = `ZMĚNA: ${state.amendment.text.substring(0, 50)}...`;
                 type = 'amendment';
+                resolutionId = state.resolutions[state.currentIndex].id; // Linked to parent
+                structureKey = 'AMENDMENT';
             } else {
                 const res = state.resolutions[state.currentIndex];
                 threshold = res.threshold;
                 passed = percent > threshold;
                 title = res.modified ? `${res.title} (UPRAVENO)` : res.title;
                 type = 'standard';
+                resolutionId = res.id;
+                structureKey = res.structureKey;
             }
 
             // Logic: Amendment passed?
@@ -520,75 +445,182 @@
                 }
             }
 
-            // Save to history
+            // Save to history including presence percent of TOTAL for the minutes
+            const presencePercentOfTotal = (present / TOTAL_SHARES_ALL) * 100;
+
             state.history.unshift({
                 time: new Date().toLocaleTimeString(),
-                title,
-                type,
-                present,
-                votes,
+                title, type, present, votes,
                 percent: percent.toFixed(1),
-                threshold,
-                passed
+                threshold, passed,
+                resolutionId,
+                structureKey,
+                presencePercentOfTotal: presencePercentOfTotal.toFixed(2),
+                fullText: state.mode === 'amendment' ? state.amendment.text : title
             });
 
             updateHistory();
 
-            // Reset
-            if (state.mode === 'amendment') {
-                state.mode = 'standard';
-                state.amendment = null;
-            }
-            
+            if (state.mode === 'amendment') { state.mode = 'standard'; state.amendment = null; }
             toggleAllVotes(false);
             updateUI();
         }
 
+        // --- AMENDMENT & NAVIGATION ---
+        function openAmendmentModal() { toggleModal('amendment-modal'); document.getElementById('amendment-text').value=''; document.getElementById('amendment-text').focus(); }
+        function closeAmendmentModal() { toggleModal('amendment-modal'); }
+        function startAmendmentVoting() {
+            const text = document.getElementById('amendment-text').value;
+            if (!text.trim()) return;
+            state.amendment = { text, threshold: parseInt(document.getElementById('amendment-threshold').value) };
+            state.mode = 'amendment';
+            toggleAllVotes(false);
+            closeAmendmentModal();
+            updateUI();
+        }
+        function cancelAmendmentMode() { if (confirm("Zrušit?")) { state.mode = 'standard'; state.amendment = null; toggleAllVotes(false); updateUI(); } }
+        function changeMainResolution() { 
+            if (state.mode === 'amendment' && !confirm("Zahodit změnu?")) return;
+            state.mode = 'standard';
+            state.currentIndex = parseInt(document.getElementById('resolution-select').value);
+            toggleAllVotes(false);
+            updateUI();
+        }
+
+        // --- MINUTES GENERATION LOGIC ---
+
+        function openMinutesModal() {
+            toggleModal('minutes-modal');
+            generateMinutesText();
+        }
+
+        function getVoteResultForResolution(resId) {
+            // Find the LATEST standard vote for this resolution ID
+            return state.history.find(h => h.resolutionId === resId && h.type === 'standard');
+        }
+
+        function formatVoteBlock(resId, voteNumber) {
+            const res = getVoteResultForResolution(resId);
+            if (!res) return `<div class="result-box text-red-600">[Hlasování č. ${voteNumber} nebylo dosud provedeno]</div>`;
+            
+            const proti = res.present - res.votes; // simplified
+            const percentProti = 100 - parseFloat(res.percent); // simplified
+            
+            return `
+            <div class="result-box">
+                <strong>Hlasování č. ${voteNumber}:</strong><br>
+                PRO: ${res.percent} % | PROTI/ZDRŽEL SE: ${percentProti.toFixed(1)} %<br>
+                Usnesení ${res.passed ? '<span style="color:green; font-weight:bold;">BYLO PŘIJATO</span>' : '<span style="color:red; font-weight:bold;">NEBYLO PŘIJATO</span>'}.
+            </div>`;
+        }
+
+        function generateMinutesText() {
+            const date = document.getElementById('min-date').value;
+            const chair = document.getElementById('min-chair').value;
+            const scribe = document.getElementById('min-scribe').value;
+            const verify = document.getElementById('min-verify').value;
+            
+            // Calculate total presence from the first vote or use 0
+            // Assuming the first vote (bottom of history) or latest represents attendance
+            const lastVote = state.history[0];
+            const presenceTotal = lastVote ? lastVote.presencePercentOfTotal : "[Doplnit]";
+
+            let html = `
+            <h1>ZÁPIS ZE ZASEDÁNÍ SHROMÁŽDĚNÍ SPOLEČENSTVÍ VLASTNÍKŮ</h1>
+            <p><strong>Název:</strong> Společenství vlastníků jednotek Komárovská 28, Brno<br>
+            <strong>Sídlo:</strong> Brno, Komárovská 28, PSČ 617 00<br>
+            <strong>IČ:</strong> 26241153<br>
+            <strong>Datum konání:</strong> ${date}<br>
+            <strong>Místo konání:</strong> Komárovská 28, Brno</p>
+
+            <h2>I. Zahájení a kontrola usnášeníschopnosti</h2>
+            <p>Zasedání zahájil ${chair}. K prezenční listině se dostavili vlastníci disponující spoluvlastnickými podíly o celkové velikosti <strong>${presenceTotal} %</strong> všech hlasů.</p>
+            <p>Konstatování: Shromáždění ${parseFloat(presenceTotal) > 50 ? 'JE' : 'NENÍ'} usnášeníschopné.</p>
+
+            <h2>II. Volba orgánů shromáždění</h2>
+            <p>Byly podány návrhy na obsazení funkcí:<br>
+            Předsedající: ${chair}<br>
+            Zapisovatel: ${scribe}<br>
+            Ověřovatel zápisu: ${verify}</p>
+            ${formatVoteBlock(1, 1)}
+
+            <h2>III. Schválení programu</h2>
+            <p>Program schůze dle pozvánky.</p>
+            ${formatVoteBlock(100, 2)}
+
+            <h2>IV. Schválení nových stanov</h2>
+            <p>Předsedající předložil návrh nového znění stanov.</p>
+            <p><strong>Usnesení:</strong> Shromáždění schvaluje nové stanovy Společenství vlastníků jednotek Komárovská 28, Brno v předloženém znění.</p>
+            ${formatVoteBlock(2, 3)}
+
+            <h2>V. Volba členů výboru</h2>
+            <p>Byla provedena volba nového výboru. Kandidáti se svou volbou souhlasili.</p>
+            <p><strong>Usnesení:</strong> Shromáždění volí do funkce členů výboru navržené kandidáty.</p>
+            ${formatVoteBlock(3, 4)}
+
+            <h2>VI. Další body (Hospodaření, Příspěvky, Odměny)</h2>
+            <p><strong>Hospodaření (Účetní závěrka):</strong></p>
+            ${formatVoteBlock(4, 5)}
+            
+            <p><strong>Výše příspěvků:</strong></p>
+            ${formatVoteBlock(5, 6)}
+            
+            <p><strong>Odměny výboru:</strong></p>
+            ${formatVoteBlock(6, 7)}
+
+            <h2>VII. Závěr</h2>
+            <p>Program byl vyčerpán.</p>
+            <br><br>
+            <p>................................................<br>${scribe} (Zapisovatel)</p>
+            <p>................................................<br>${chair} (Předsedající)</p>
+            <p>................................................<br>${verify} (Ověřovatel)</p>
+            `;
+
+            document.getElementById('minutes-content').innerHTML = html;
+        }
+
+        function copyMinutes() {
+            // Copy text
+            const content = document.getElementById('minutes-content');
+            
+            // Select text
+            const range = document.createRange();
+            range.selectNode(content);
+            window.getSelection().removeAllRanges();
+            window.getSelection().addRange(range);
+            
+            try {
+                document.execCommand('copy');
+                alert("Text byl zkopírován do schránky! Nyní ho vložte do Wordu (Ctrl+V).");
+            } catch(e) {
+                alert("Nelze automaticky zkopírovat. Prosím vyberte text myší a stiskněte Ctrl+C.");
+            }
+            
+            window.getSelection().removeAllRanges();
+        }
+
+        // --- HELPERS ---
         function updateHistory() {
             const list = document.getElementById('history-list');
             list.innerHTML = '';
-            
             state.history.forEach(rec => {
                 const isAm = rec.type === 'amendment';
                 const row = document.createElement('div');
                 row.className = `p-3 ${isAm ? 'bg-orange-50 border-l-4 border-orange-400' : 'bg-white border-l-4 border-blue-400'}`;
-                
                 row.innerHTML = `
                     <div class="flex justify-between items-start mb-1">
                         <span class="text-xs text-gray-400 font-mono">${rec.time}</span>
-                        <span class="px-2 py-0.5 rounded text-[10px] uppercase font-bold text-white ${rec.passed ? 'bg-green-600' : 'bg-red-500'}">
-                            ${rec.passed ? 'PŘIJATO' : 'NEPŘIJATO'}
-                        </span>
+                        <span class="px-2 py-0.5 rounded text-[10px] uppercase font-bold text-white ${rec.passed ? 'bg-green-600' : 'bg-red-500'}">${rec.passed ? 'PŘIJATO' : 'NEPŘIJATO'}</span>
                     </div>
-                    <div class="font-bold text-sm text-gray-800 mb-1 leading-tight">
-                        ${isAm ? '<span class="text-orange-600">POZMĚŇOVACÍ NÁVRH:</span>' : ''} ${rec.title}
-                    </div>
-                    <div class="flex justify-between text-xs text-gray-500">
-                        <span>Pro: <b>${rec.votes}</b> / Přít: ${rec.present}</span>
-                        <span><b>${rec.percent}%</b> (kvórum ${rec.threshold}%)</span>
-                    </div>
+                    <div class="font-bold text-sm text-gray-800 mb-1 leading-tight">${isAm ? '<span class="text-orange-600">POZMĚŇOVACÍ NÁVRH:</span>' : ''} ${rec.title}</div>
+                    <div class="flex justify-between text-xs text-gray-500"><span>Pro: <b>${rec.votes}</b> / Přít: ${rec.present}</span><span><b>${rec.percent}%</b></span></div>
                 `;
                 list.appendChild(row);
             });
         }
+        function clearHistory() { if(confirm("Smazat?")) { state.history = []; updateHistory(); } }
+        function toggleModal(id) { const m=document.getElementById(id); m.classList.toggle('opacity-0'); m.classList.toggle('pointer-events-none'); document.body.classList.toggle('modal-active'); }
 
-        function clearHistory() {
-            if(confirm("Smazat historii?")) { state.history = []; updateHistory(); }
-        }
-
-        // Helper
-        function toggleModal(id) {
-            const modal = document.getElementById(id);
-            if (modal.classList.contains('opacity-0')) {
-                modal.classList.remove('opacity-0', 'pointer-events-none');
-                document.body.classList.add('modal-active');
-            } else {
-                modal.classList.add('opacity-0', 'pointer-events-none');
-                document.body.classList.remove('modal-active');
-            }
-        }
-
-        // Start
         init();
     </script>
 </body>
