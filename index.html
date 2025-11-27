@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hlasovací Systém SVJ - v3.2 (Profi)</title>
+    <title>Hlasovací Systém SVJ - v3.3</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -58,7 +58,7 @@
                     </button>
 
                      <button onclick="toggleModal('legal-modal')" class="whitespace-nowrap bg-gray-600 hover:bg-gray-700 text-white text-xs md:text-sm font-bold py-2 px-3 rounded shadow flex items-center gap-1" title="Právní tahák">
-                        <i class="fas fa-balance-scale"></i>
+                        <i class="fas fa-balance-scale"></i> Právní tahák
                     </button>
 
                     <button onclick="resetApp()" class="whitespace-nowrap bg-red-800 hover:bg-red-900 text-white text-xs md:text-sm font-bold py-2 px-3 rounded shadow flex items-center gap-1" title="Vymazat všechna data">
@@ -272,18 +272,43 @@
         </div>
     </div>
 
-    <!-- MODAL: Legal Cheat Sheet -->
+    <!-- MODAL: Legal Cheat Sheet (RESTORED CONTENT) -->
     <div id="legal-modal" class="modal opacity-0 pointer-events-none fixed w-full h-full top-0 left-0 flex items-center justify-center z-50">
         <div class="modal-overlay absolute w-full h-full bg-gray-900 opacity-50" onclick="toggleModal('legal-modal')"></div>
         <div class="modal-container bg-white w-11/12 md:max-w-2xl mx-auto rounded shadow-lg z-50 overflow-y-auto max-h-[90vh]">
             <div class="modal-content py-4 text-left px-6">
                 <div class="flex justify-between items-center pb-3 border-b">
-                    <p class="text-xl font-bold text-gray-800"><i class="fas fa-balance-scale mr-2"></i>Právní postup</p>
+                    <p class="text-xl font-bold text-gray-800"><i class="fas fa-balance-scale mr-2"></i>Právní postup při změnách</p>
                     <button onclick="toggleModal('legal-modal')" class="text-gray-500 hover:text-gray-800"><i class="fas fa-times fa-lg"></i></button>
                 </div>
                 <div class="my-4 text-sm text-gray-700 space-y-3">
-                    <p>Pokud se mění stanovy, nehlasujte rovnou o celku. Hlasujte nejprve o pozměňovacích návrzích.</p>
-                    <p class="bg-yellow-100 p-2 rounded"><strong>Tip:</strong> Pro generování zápisu je nutné každé hlasování "Uzavřít". Data se automaticky ukládají do prohlížeče.</p>
+                    <div class="bg-yellow-50 border-l-4 border-yellow-400 p-3">
+                        <p class="font-bold">Základní pravidlo:</p>
+                        <p>Nehlasujte rovnou o "nových stanovách" jako celku, pokud jsou navrženy změny. Musíte se k finální verzi propracovat přes <strong>hlasování o dílčích pozměňovacích návrzích</strong>.</p>
+                    </div>
+                    
+                    <h3 class="font-bold text-lg mt-4">Postup krok za krokem:</h3>
+                    <ol class="list-decimal pl-5 space-y-1">
+                        <li><strong>Přednesení změny:</strong> Někdo navrhne: <em>"V článku X vypustit větu Y..."</em></li>
+                        <li><strong>Hlasování o změně:</strong> Hlasuje se POUZE o této změně (většinou >50% přítomných).</li>
+                        <li><strong>Výsledek:</strong> 
+                            <ul class="list-disc pl-5 text-gray-500">
+                                <li>Pokud projde: Návrh stanov se v tomto bodě mění.</li>
+                                <li>Pokud neprojde: Zůstává původní text z pozvánky.</li>
+                            </ul>
+                        </li>
+                        <li><strong>Finální hlasování:</strong> Až se vyřeší všechny změny, hlasuje se o <strong>Stanovách jako celku</strong> (ve znění přijatých změn).</li>
+                    </ol>
+
+                    <div class="bg-red-50 border-l-4 border-red-500 p-3 mt-4">
+                        <p class="font-bold text-red-700">RIZIKO: Nepřítomní vlastníci</p>
+                        <p>Pokud změníte podstatu návrhu (např. způsob placení), může to nepřítomný vlastník napadnout u soudu, protože "hlasoval per rollam" nebo dal plnou moc pro původní text. <br><strong>Doporučení:</strong> Na schůzi dělat jen upřesňující, ne koncepční změny.</p>
+                    </div>
+
+                     <div class="bg-blue-50 border-l-4 border-blue-400 p-3 mt-4">
+                        <p class="font-bold text-blue-800">TIP: Ukládání dat</p>
+                        <p>Tato aplikace nyní automaticky ukládá výsledky do vašeho prohlížeče. Pro generování zápisu je nutné každé hlasování kliknout na "Uzavřít hlasování".</p>
+                    </div>
                 </div>
             </div>
         </div>
