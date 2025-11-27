@@ -3,46 +3,73 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hlasovací Systém SVJ - Komárovská 497/28</title>
+    <title>Hlasovací Systém SVJ - v3.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         .checkbox-lg { transform: scale(1.3); cursor: pointer; }
         .checkbox-xl { transform: scale(1.6); cursor: pointer; }
-        
-        /* Custom scrollbar for table body if needed */
-        .max-h-table { max-height: 60vh; overflow-y: auto; }
-        
-        /* Disabled row style */
-        .opacity-40 { opacity: 0.4; pointer-events: none; }
+        .modal { transition: opacity 0.25s ease; }
+        body.modal-active { overflow: hidden; }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen pb-20">
 
-    <!-- Top Control Panel (Sticky) -->
-    <div class="sticky top-0 z-50 bg-white shadow-lg border-b border-gray-300">
+    <!-- Sticky Header -->
+    <div class="sticky top-0 z-40 bg-white shadow-lg border-b border-gray-300">
         
-        <!-- Resolution Selector -->
-        <div class="bg-blue-900 text-white p-3">
-            <div class="container mx-auto flex flex-col md:flex-row justify-between items-center gap-3">
-                <div class="flex items-center gap-2 w-full md:w-auto">
-                    <span class="font-bold whitespace-nowrap"><i class="fas fa-gavel mr-2"></i>Usnesení:</span>
-                    <select id="resolution-select" class="text-gray-900 text-sm rounded-lg block w-full p-2 border-none focus:ring-2 focus:ring-blue-500" onchange="changeResolution()">
-                        <!-- Options populated by JS -->
-                    </select>
+        <!-- Resolution / Mode Selector -->
+        <div id="top-bar" class="bg-blue-900 text-white p-3 transition-colors duration-500">
+            <div class="container mx-auto flex flex-col xl:flex-row justify-between items-center gap-3">
+                
+                <!-- Main Controls -->
+                <div class="flex flex-col md:flex-row items-center gap-2 w-full xl:w-auto">
+                    <div class="flex items-center gap-2 w-full">
+                        <span class="font-bold whitespace-nowrap text-sm md:text-base"><i class="fas fa-gavel mr-2"></i>Bod:</span>
+                        <select id="resolution-select" class="text-gray-900 text-sm rounded block w-full p-2 border-none focus:ring-2 focus:ring-blue-500 max-w-md" onchange="changeMainResolution()">
+                            <!-- Options by JS -->
+                        </select>
+                    </div>
+                    
+                    <!-- Amendment Button -->
+                    <button onclick="openAmendmentModal()" class="whitespace-nowrap bg-orange-500 hover:bg-orange-600 text-white text-xs md:text-sm font-bold py-2 px-3 rounded shadow border border-orange-600 flex items-center gap-1">
+                        <i class="fas fa-pen-fancy"></i> Navrhnout změnu
+                    </button>
+
+                     <!-- Legal Help Button -->
+                     <button onclick="toggleModal('legal-modal')" class="whitespace-nowrap bg-gray-600 hover:bg-gray-700 text-white text-xs md:text-sm font-bold py-2 px-3 rounded shadow flex items-center gap-1">
+                        <i class="fas fa-balance-scale"></i> Právní tahák
+                    </button>
                 </div>
-                <div class="text-xs bg-blue-800 px-3 py-1 rounded" id="quorum-info">
-                    Potřebné kvórum: > 50% přítomných
+
+                <!-- Active Mode Indicator -->
+                <div class="flex items-center gap-2">
+                    <div id="amendment-indicator" class="hidden bg-orange-100 text-orange-800 px-3 py-1 rounded font-bold text-sm border border-orange-300 animate-pulse">
+                        <i class="fas fa-exclamation-circle"></i> REŽIM POZMĚŇOVACÍHO NÁVRHU
+                    </div>
+                    <div class="text-xs bg-blue-800 px-3 py-1 rounded border border-blue-700" id="quorum-info">
+                        Kvórum: > 50%
+                    </div>
                 </div>
+            </div>
+            
+            <!-- Context Sub-header (shows specifically what we are voting on NOW) -->
+            <div class="container mx-auto mt-2 pt-2 border-t border-blue-800 flex justify-between items-center">
+                <div class="font-mono text-sm text-blue-200">
+                    Hlasujeme o: <span id="current-voting-title" class="font-bold text-white text-lg">...</span>
+                </div>
+                <button id="cancel-amendment-btn" onclick="cancelAmendmentMode()" class="hidden text-xs text-orange-200 hover:text-white underline">
+                    Zrušit návrh a vrátit se k bodu
+                </button>
             </div>
         </div>
 
         <!-- Live Results Bar -->
-        <div class="container mx-auto px-4 py-3">
+        <div class="container mx-auto px-4 py-3 bg-white">
             <div class="flex flex-col md:flex-row items-center gap-4 justify-between">
                 
-                <!-- Stats Grid -->
+                <!-- Stats -->
                 <div class="grid grid-cols-3 gap-4 w-full md:w-auto text-center divide-x divide-gray-300">
                     <div class="px-2">
                         <div class="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Přítomno</div>
@@ -68,12 +95,11 @@
                     <div class="flex mb-2 items-center justify-between">
                         <div class="text-right w-full">
                             <span id="status-text" class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded text-gray-600 bg-gray-200">
-                                Čekání na hlasy
+                                Čekání
                             </span>
                         </div>
                     </div>
                     <div class="overflow-hidden h-4 mb-1 text-xs flex rounded bg-gray-200 border border-gray-300 relative">
-                        <!-- Quorum marker line -->
                         <div id="quorum-marker" class="absolute top-0 bottom-0 w-0.5 bg-black z-10 opacity-50 border-l border-dashed border-gray-600" style="left: 50%" title="Potřebná hranice"></div>
                         <div id="progress-bar" style="width:0%" class="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-blue-500 transition-all duration-500"></div>
                     </div>
@@ -81,36 +107,36 @@
 
                 <!-- Action Button -->
                 <div>
-                    <button onclick="saveRound()" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded shadow-lg transition flex items-center gap-2">
-                        <i class="fas fa-save"></i> <span>Uzavřít & Uložit</span>
+                    <button onclick="saveRound()" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded shadow-lg transition flex items-center gap-2 transform hover:scale-105">
+                        <i class="fas fa-save"></i> <span>UZAVŘÍT HLASOVÁNÍ</span>
                     </button>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Main Grid -->
     <div class="container mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         <!-- Left Column: Voting Table -->
         <div class="lg:col-span-2 space-y-4">
             
-            <!-- Tools -->
-            <div class="flex justify-between items-center bg-white p-3 rounded shadow-sm">
+            <!-- Quick Tools -->
+            <div class="flex justify-between items-center bg-white p-3 rounded shadow-sm border border-gray-200">
                 <div class="flex gap-2">
-                    <button onclick="toggleAllPresence(true)" class="text-xs bg-gray-200 hover:bg-gray-300 text-gray-800 px-3 py-1.5 rounded transition">
-                        <i class="fas fa-user-check"></i> Všichni přítomni
+                    <button onclick="toggleAllPresence(true)" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-1.5 rounded transition border border-gray-300">
+                        Všichni přítomni
                     </button>
-                    <button onclick="toggleAllPresence(false)" class="text-xs bg-gray-200 hover:bg-gray-300 text-gray-800 px-3 py-1.5 rounded transition">
-                        <i class="fas fa-user-slash"></i> Nikdo
+                    <button onclick="toggleAllPresence(false)" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-1.5 rounded transition border border-gray-300">
+                        Nikdo
                     </button>
                 </div>
-                <div class="h-6 w-px bg-gray-300 mx-2"></div>
                 <div class="flex gap-2">
-                    <button onclick="toggleAllVotes(true)" class="text-xs bg-blue-100 hover:bg-blue-200 text-blue-800 px-3 py-1.5 rounded transition font-bold">
-                        <i class="fas fa-thumbs-up"></i> Všichni PRO
+                    <button onclick="toggleAllVotes(true)" class="text-xs bg-blue-50 hover:bg-blue-100 text-blue-800 px-3 py-1.5 rounded transition font-bold border border-blue-200">
+                        Všichni PRO
                     </button>
-                    <button onclick="toggleAllVotes(false)" class="text-xs bg-red-100 hover:bg-red-200 text-red-800 px-3 py-1.5 rounded transition">
-                        <i class="fas fa-times"></i> Zrušit hlasy
+                    <button onclick="toggleAllVotes(false)" class="text-xs bg-red-50 hover:bg-red-100 text-red-800 px-3 py-1.5 rounded transition border border-red-200">
+                        Zrušit hlasy
                     </button>
                 </div>
             </div>
@@ -121,67 +147,115 @@
                     <thead class="bg-gray-800 text-white text-sm uppercase sticky top-0">
                         <tr>
                             <th class="p-3 w-10 text-center">#</th>
-                            <th class="p-3">Vlastník (Jednotka)</th>
+                            <th class="p-3">Vlastník</th>
                             <th class="p-3 w-20 text-center">Podíl</th>
-                            <th class="p-3 w-24 text-center bg-gray-700 cursor-pointer" title="Kliknutím označíte přítomnost">
-                                <i class="fas fa-walking"></i><br>Přítomen
+                            <th class="p-3 w-24 text-center bg-gray-700 cursor-pointer" onclick="toggleAllPresence(true)">
+                                <i class="fas fa-walking"></i> Přít.
                             </th>
-                            <th class="p-3 w-24 text-center bg-blue-900 cursor-pointer" title="Hlasování">
-                                <i class="fas fa-vote-yea"></i><br>PRO
+                            <th class="p-3 w-24 text-center bg-blue-900 cursor-pointer" onclick="toggleAllVotes(true)">
+                                <i class="fas fa-vote-yea"></i> PRO
                             </th>
                         </tr>
                     </thead>
                     <tbody id="owners-table" class="divide-y divide-gray-200 text-sm">
-                        <!-- Rows -->
+                        <!-- JS Generated -->
                     </tbody>
                 </table>
             </div>
         </div>
 
-        <!-- Right Column: History & Info -->
+        <!-- Right Column: History -->
         <div class="lg:col-span-1 space-y-6">
-            
-            <!-- History Card -->
             <div class="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
-                <div class="bg-gray-100 px-4 py-3 border-b border-gray-200 font-bold text-gray-700 flex justify-between items-center">
-                    <span><i class="fas fa-history mr-2"></i>Historie hlasování</span>
-                    <button onclick="clearHistory()" class="text-xs text-red-500 hover:text-red-700 underline">Vymazat</button>
+                <div class="bg-gray-50 px-4 py-3 border-b border-gray-200 font-bold text-gray-700 flex justify-between items-center">
+                    <span><i class="fas fa-history mr-2"></i>Zápis hlasování</span>
+                    <button onclick="clearHistory()" class="text-xs text-red-400 hover:text-red-600">Smazat</button>
                 </div>
-                <div class="max-h-[500px] overflow-y-auto p-0">
-                    <div id="history-list" class="divide-y divide-gray-100">
-                        <div class="p-8 text-center text-gray-400 text-sm italic" id="empty-history-msg">
-                            Zatím nebylo uzavřeno žádné hlasování.
-                        </div>
+                <div class="max-h-[600px] overflow-y-auto p-0 bg-gray-50">
+                    <div id="history-list" class="divide-y divide-gray-200">
+                        <!-- History Items -->
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
 
-            <!-- Legend -->
-            <div class="bg-blue-50 rounded-lg p-4 border border-blue-100 text-sm text-blue-800">
-                <h4 class="font-bold mb-2">Jak to funguje:</h4>
-                <ul class="list-disc pl-4 space-y-1">
-                    <li>Nejprve označte <strong>přítomné</strong> vlastníky.</li>
-                    <li>Nepřítomní nemohou hlasovat a nepočítají se do základu.</li>
-                    <li>Procenta se počítají z podílů <strong>přítomných</strong>.</li>
-                    <li>Pro Stanovy je potřeba 75 %, jinak 50 %.</li>
-                </ul>
+    <!-- MODAL: Amendment -->
+    <div id="amendment-modal" class="modal opacity-0 pointer-events-none fixed w-full h-full top-0 left-0 flex items-center justify-center z-50">
+        <div class="modal-overlay absolute w-full h-full bg-gray-900 opacity-50"></div>
+        <div class="modal-container bg-white w-11/12 md:max-w-md mx-auto rounded shadow-lg z-50 overflow-y-auto">
+            <div class="modal-content py-4 text-left px-6">
+                <div class="flex justify-between items-center pb-3">
+                    <p class="text-2xl font-bold text-orange-600">Nový pozměňovací návrh</p>
+                    <div class="cursor-pointer z-50" onclick="closeAmendmentModal()">
+                        <i class="fas fa-times"></i>
+                    </div>
+                </div>
+                <div class="my-5">
+                    <p class="text-sm text-gray-600 mb-2">Jak zní navrhovaná změna?</p>
+                    <textarea id="amendment-text" class="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-orange-500" rows="3" placeholder="Např.: V článku 5 změnit částku na 2000 Kč..."></textarea>
+                    
+                    <p class="text-sm text-gray-600 mt-4 mb-2">Vyžadované kvórum pro změnu:</p>
+                    <select id="amendment-threshold" class="w-full p-2 border border-gray-300 rounded bg-gray-50">
+                        <option value="50">Nadpoloviční většina přítomných (>50%) - Standard</option>
+                        <option value="75">Tříčtvrteční většina (>75%) - Bezpečnější</option>
+                    </select>
+                </div>
+                <div class="flex justify-end pt-2">
+                    <button onclick="startAmendmentVoting()" class="px-4 bg-orange-500 p-3 rounded-lg text-white hover:bg-orange-600 font-bold">Zahájit hlasování o změně</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Legal Cheat Sheet -->
+    <div id="legal-modal" class="modal opacity-0 pointer-events-none fixed w-full h-full top-0 left-0 flex items-center justify-center z-50">
+        <div class="modal-overlay absolute w-full h-full bg-gray-900 opacity-50" onclick="toggleModal('legal-modal')"></div>
+        <div class="modal-container bg-white w-11/12 md:max-w-2xl mx-auto rounded shadow-lg z-50 overflow-y-auto max-h-[90vh]">
+            <div class="modal-content py-4 text-left px-6">
+                <div class="flex justify-between items-center pb-3 border-b">
+                    <p class="text-xl font-bold text-gray-800"><i class="fas fa-balance-scale mr-2"></i>Právní postup při změnách</p>
+                    <button onclick="toggleModal('legal-modal')" class="text-gray-500 hover:text-gray-800"><i class="fas fa-times fa-lg"></i></button>
+                </div>
+                <div class="my-4 text-sm text-gray-700 space-y-3">
+                    <div class="bg-yellow-50 border-l-4 border-yellow-400 p-3">
+                        <p class="font-bold">Základní pravidlo:</p>
+                        <p>Nehlasujte rovnou o "nových stanovách". Musíte se k nim propracovat přes <strong>hlasování o dílčích změnách</strong>.</p>
+                    </div>
+                    
+                    <h3 class="font-bold text-lg mt-4">Postup krok za krokem:</h3>
+                    <ol class="list-decimal pl-5 space-y-1">
+                        <li><strong>Přednesení změny:</strong> Někdo navrhne: <em>"V článku X vypustit větu Y..."</em></li>
+                        <li><strong>Hlasování o změně:</strong> Hlasuje se POUZE o této změně (většinou >50% přítomných).</li>
+                        <li><strong>Výsledek:</strong> 
+                            <ul class="list-disc pl-5 text-gray-500">
+                                <li>Pokud projde: Návrh stanov se v tomto bodě mění.</li>
+                                <li>Pokud neprojde: Zůstává původní text z pozvánky.</li>
+                            </ul>
+                        </li>
+                        <li><strong>Finální hlasování:</strong> Až se vyřeší všechny změny, hlasuje se o <strong>Stanovách jako celku</strong> (ve znění přijatých změn).</li>
+                    </ol>
+
+                    <div class="bg-red-50 border-l-4 border-red-500 p-3 mt-4">
+                        <p class="font-bold text-red-700">RIZIKO: Nepřítomní vlastníci</p>
+                        <p>Pokud změníte podstatu návrhu (např. způsob placení), může to nepřítomný vlastník napadnout u soudu, protože "hlasoval per rollam" nebo dal plnou moc pro původní text. <br><strong>Doporučení:</strong> Na schůzi dělat jen upřesňující, ne koncepční změny.</p>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
     <script>
-        // --- DATA CONFIGURATION ---
-
-        const resolutions = [
+        // --- DATA ---
+        const initialResolutions = [
             { id: 1, title: "1. Volba předsedy (J. Kislenko) a zapisovatele", threshold: 50 },
             { id: 2, title: "2. Schválení nových stanov SVJ", threshold: 75, highlight: true },
-            { id: 3, title: "3. Volba výboru SVJ (funkční období 5 let)", threshold: 50 },
+            { id: 3, title: "3. Volba výboru SVJ (5 let)", threshold: 50 },
             { id: 4, title: "4. Schválení účetní závěrky 2024", threshold: 50 },
             { id: 5, title: "5. Schválení výše měsíčních příspěvků", threshold: 50 },
-            { id: 6, title: "6. Schválení odměny členů výboru (1.000 Kč)", threshold: 50 }
+            { id: 6, title: "6. Schválení odměny výboru (1.000 Kč)", threshold: 50 }
         ];
 
-        // Cleaned owner data
         const owners = [
             { id: 1, unit: "497/1", name: "Ben-Chenni Zulicha", share: 45 },
             { id: 2, unit: "497/2", name: "Kraus Tomáš", share: 34 },
@@ -203,258 +277,314 @@
 
         // --- STATE ---
         let state = {
-            currentResolutionIndex: 0,
-            ownersStatus: owners.map(o => ({ 
-                id: o.id, 
-                present: false, // Default not present 
-                votedYes: false 
-            })),
+            mode: 'standard', // 'standard' or 'amendment'
+            resolutions: JSON.parse(JSON.stringify(initialResolutions)), // deep copy
+            currentIndex: 0,
+            amendment: null, // { text: string, threshold: number }
+            owners: owners.map(o => ({ ...o, present: false, votedYes: false })),
             history: []
         };
 
-        // --- INIT & RENDER ---
+        // --- CORE FUNCTIONS ---
 
         function init() {
-            // Populate Resolution Select
+            renderResolutionSelect();
+            renderTable();
+            updateUI();
+            updateHistory();
+        }
+
+        function renderResolutionSelect() {
             const select = document.getElementById('resolution-select');
-            resolutions.forEach((res, index) => {
+            select.innerHTML = '';
+            state.resolutions.forEach((res, index) => {
                 const opt = document.createElement('option');
                 opt.value = index;
-                opt.text = res.title;
+                opt.text = res.modified ? `[UPRAVENO] ${res.title}` : res.title;
                 if (res.highlight) opt.className = "font-bold text-red-600 bg-red-50";
                 select.appendChild(opt);
             });
-
-            renderTable();
-            updateStats();
-        }
-
-        function changeResolution() {
-            const select = document.getElementById('resolution-select');
-            state.currentResolutionIndex = parseInt(select.value);
-            
-            // Note: We keep presence, but clear votes when changing resolution? 
-            // Usually easier to keep presence and just clear votes.
-            toggleAllVotes(false); 
-            updateStats();
-            updateQuorumDisplay();
-        }
-
-        function updateQuorumDisplay() {
-            const currentRes = resolutions[state.currentResolutionIndex];
-            const info = document.getElementById('quorum-info');
-            const marker = document.getElementById('quorum-marker');
-            
-            info.textContent = `Potřebné kvórum: > ${currentRes.threshold}% přítomných`;
-            marker.style.left = `${currentRes.threshold}%`;
-            
-            if (currentRes.threshold > 50) {
-                info.className = "text-xs bg-red-800 text-white px-3 py-1 rounded shadow animate-pulse";
-            } else {
-                info.className = "text-xs bg-blue-800 text-white px-3 py-1 rounded";
-            }
+            select.value = state.currentIndex;
         }
 
         function renderTable() {
             const tbody = document.getElementById('owners-table');
             tbody.innerHTML = '';
-
-            owners.forEach((owner, index) => {
-                const status = state.ownersStatus[index];
+            
+            state.owners.forEach((o, idx) => {
                 const tr = document.createElement('tr');
-                tr.id = `row-${owner.id}`;
-                tr.className = status.present ? "bg-white hover:bg-gray-50 transition-colors" : "bg-gray-100 text-gray-400";
-
+                tr.className = o.present ? "bg-white hover:bg-gray-50 transition-colors" : "bg-gray-100 text-gray-400";
                 tr.innerHTML = `
-                    <td class="p-3 text-center font-mono text-xs text-gray-500">${index + 1}</td>
+                    <td class="p-3 text-center text-xs font-mono">${idx + 1}</td>
                     <td class="p-3">
-                        <div class="font-bold text-sm text-blue-900">${owner.unit}</div>
-                        <div class="text-sm truncate max-w-[200px]" title="${owner.name}">${owner.name}</div>
+                        <div class="font-bold text-blue-900 text-sm">${o.unit}</div>
+                        <div class="truncate max-w-[180px] text-xs" title="${o.name}">${o.name}</div>
                     </td>
-                    <td class="p-3 text-center font-mono text-sm">${owner.share}</td>
-                    <td class="p-3 text-center border-l border-gray-200 bg-gray-50">
-                        <input type="checkbox" 
-                            class="checkbox-lg text-gray-600 focus:ring-gray-500 rounded" 
-                            onchange="updatePresence(${index}, this.checked)"
-                            ${status.present ? 'checked' : ''}>
+                    <td class="p-3 text-center text-sm font-mono">${o.share}</td>
+                    <td class="p-3 text-center border-l bg-gray-50">
+                        <input type="checkbox" class="checkbox-lg accent-gray-600" 
+                            ${o.present ? 'checked' : ''} 
+                            onchange="setPresence(${idx}, this.checked)">
                     </td>
-                    <td class="p-3 text-center border-l border-gray-200 ${status.present ? 'bg-blue-50' : ''}">
-                        <input type="checkbox" 
-                            id="vote-${owner.id}"
-                            class="checkbox-xl text-blue-600 focus:ring-blue-500 rounded disabled:opacity-0" 
-                            onchange="updateVote(${index}, this.checked)"
-                            ${status.votedYes ? 'checked' : ''}
-                            ${!status.present ? 'disabled' : ''}>
+                    <td class="p-3 text-center border-l ${o.present ? 'bg-blue-50' : ''}">
+                        <input type="checkbox" class="checkbox-xl accent-blue-600 disabled:opacity-0" 
+                            ${o.votedYes ? 'checked' : ''} 
+                            ${!o.present ? 'disabled' : ''}
+                            onchange="setVote(${idx}, this.checked)">
                     </td>
                 `;
                 tbody.appendChild(tr);
             });
-            updateQuorumDisplay(); // Init quorum visual
         }
 
-        // --- LOGIC ---
+        // --- VOTING LOGIC ---
 
-        function updatePresence(index, isPresent) {
-            state.ownersStatus[index].present = isPresent;
-            
-            // If marked absent, remove vote
-            if (!isPresent) {
-                state.ownersStatus[index].votedYes = false;
-            }
-
-            renderTable(); // Re-render to update row styling/disabling
-            updateStats();
+        function setPresence(idx, val) {
+            state.owners[idx].present = val;
+            if (!val) state.owners[idx].votedYes = false;
+            renderTable();
+            updateUI();
         }
 
-        function updateVote(index, isYes) {
-            if (!state.ownersStatus[index].present) return; // Security check
-            state.ownersStatus[index].votedYes = isYes;
-            updateStats();
+        function setVote(idx, val) {
+            if (!state.owners[idx].present) return;
+            state.owners[idx].votedYes = val;
+            updateUI();
         }
 
         function toggleAllPresence(val) {
-            state.ownersStatus.forEach(s => {
-                s.present = val;
-                if (!val) s.votedYes = false;
+            state.owners.forEach(o => {
+                o.present = val;
+                if (!val) o.votedYes = false;
             });
             renderTable();
-            updateStats();
+            updateUI();
         }
 
         function toggleAllVotes(val) {
-            state.ownersStatus.forEach(s => {
-                if (s.present) s.votedYes = val;
+            state.owners.forEach(o => {
+                if (o.present) o.votedYes = val;
             });
             renderTable();
-            updateStats();
+            updateUI();
         }
 
-        function calculateResults() {
-            let presentShares = 0;
-            let yesShares = 0;
-
-            state.ownersStatus.forEach((status, idx) => {
-                const share = owners[idx].share;
-                if (status.present) {
-                    presentShares += share;
-                    if (status.votedYes) {
-                        yesShares += share;
-                    }
-                }
-            });
-
-            return { presentShares, yesShares };
+        function calculate() {
+            const present = state.owners.reduce((acc, o) => o.present ? acc + o.share : acc, 0);
+            const votes = state.owners.reduce((acc, o) => (o.present && o.votedYes) ? acc + o.share : acc, 0);
+            return { present, votes };
         }
 
-        function updateStats() {
-            const { presentShares, yesShares } = calculateResults();
-            const currentRes = resolutions[state.currentResolutionIndex];
+        function updateUI() {
+            const { present, votes } = calculate();
             
-            // Avoid division by zero
-            const percentage = presentShares > 0 ? (yesShares / presentShares) * 100 : 0;
-            const isPassed = percentage > currentRes.threshold;
+            // Determine active config
+            let currentTitle, threshold;
+            if (state.mode === 'amendment') {
+                currentTitle = `POZMĚŇOVACÍ NÁVRH: ${state.amendment.text}`;
+                threshold = state.amendment.threshold;
+            } else {
+                const res = state.resolutions[state.currentIndex];
+                currentTitle = res.modified ? `${res.title} (ve znění změn)` : res.title;
+                threshold = res.threshold;
+            }
 
-            // DOM Updates
-            document.getElementById('present-shares').textContent = presentShares;
-            document.getElementById('yes-votes').textContent = yesShares;
+            // Stats
+            const percent = present > 0 ? (votes / present) * 100 : 0;
+            const passed = percent > threshold;
+
+            document.getElementById('current-voting-title').textContent = state.mode === 'amendment' ? "POZMĚŇOVACÍ NÁVRH" : state.resolutions[state.currentIndex].title;
+            document.getElementById('present-shares').textContent = present;
+            document.getElementById('yes-votes').textContent = votes;
             
+            // Visuals
             const badge = document.getElementById('result-badge');
             const bar = document.getElementById('progress-bar');
-            const statusText = document.getElementById('status-text');
+            const status = document.getElementById('status-text');
+            const marker = document.getElementById('quorum-marker');
+            const qInfo = document.getElementById('quorum-info');
 
-            badge.textContent = percentage.toFixed(1) + ' %';
-            bar.style.width = percentage + '%';
+            badge.textContent = percent.toFixed(1) + ' %';
+            bar.style.width = percent + '%';
+            marker.style.left = threshold + '%';
+            qInfo.textContent = `Kvórum: > ${threshold}%`;
 
-            if (presentShares === 0) {
-                statusText.textContent = "Žádní přítomní";
-                statusText.className = "text-xs font-semibold inline-block py-1 px-2 uppercase rounded text-gray-600 bg-gray-200";
+            if (present === 0) {
+                status.textContent = "ČEKÁNÍ"; status.className = "text-xs font-semibold px-2 py-1 rounded bg-gray-200 text-gray-500";
                 badge.className = "px-2 py-1 rounded text-white font-bold text-lg bg-gray-400";
                 bar.className = "h-full bg-gray-400";
-            } else if (isPassed) {
-                statusText.textContent = "SCHVÁLENO";
-                statusText.className = "text-xs font-semibold inline-block py-1 px-2 uppercase rounded text-green-800 bg-green-200 animate-pulse";
+            } else if (passed) {
+                status.textContent = "SCHVÁLENO"; status.className = "text-xs font-semibold px-2 py-1 rounded bg-green-200 text-green-800 animate-pulse";
                 badge.className = "px-2 py-1 rounded text-white font-bold text-lg bg-green-600 shadow";
-                bar.className = "h-full bg-green-500 transition-all duration-300";
+                bar.className = "h-full bg-green-500";
             } else {
-                statusText.textContent = "NEPŘIJATO";
-                statusText.className = "text-xs font-semibold inline-block py-1 px-2 uppercase rounded text-red-800 bg-red-200";
+                status.textContent = "NEPŘIJATO"; status.className = "text-xs font-semibold px-2 py-1 rounded bg-red-200 text-red-800";
                 badge.className = "px-2 py-1 rounded text-white font-bold text-lg bg-red-500 shadow";
-                bar.className = "h-full bg-red-500 transition-all duration-300";
+                bar.className = "h-full bg-red-500";
+            }
+
+            // Mode Styles
+            const topBar = document.getElementById('top-bar');
+            const amInd = document.getElementById('amendment-indicator');
+            const canBtn = document.getElementById('cancel-amendment-btn');
+            
+            if (state.mode === 'amendment') {
+                topBar.classList.remove('bg-blue-900');
+                topBar.classList.add('bg-orange-700');
+                amInd.classList.remove('hidden');
+                canBtn.classList.remove('hidden');
+            } else {
+                topBar.classList.add('bg-blue-900');
+                topBar.classList.remove('bg-orange-700');
+                amInd.classList.add('hidden');
+                canBtn.classList.add('hidden');
             }
         }
 
-        // --- HISTORY & SAVING ---
+        // --- AMENDMENT WORKFLOW ---
+
+        function openAmendmentModal() {
+            toggleModal('amendment-modal');
+            document.getElementById('amendment-text').value = '';
+            document.getElementById('amendment-text').focus();
+        }
+
+        function closeAmendmentModal() {
+            toggleModal('amendment-modal');
+        }
+
+        function startAmendmentVoting() {
+            const text = document.getElementById('amendment-text').value;
+            const thresh = parseInt(document.getElementById('amendment-threshold').value);
+            
+            if (!text.trim()) { alert("Zadejte text změny."); return; }
+
+            state.amendment = { text, threshold: thresh };
+            state.mode = 'amendment';
+            
+            // Clear current votes for the new round
+            toggleAllVotes(false);
+            
+            closeAmendmentModal();
+            updateUI();
+        }
+
+        function cancelAmendmentMode() {
+            if (confirm("Opravdu zrušit hlasování o tomto návrhu? (Hlasy budou ztraceny)")) {
+                state.mode = 'standard';
+                state.amendment = null;
+                toggleAllVotes(false);
+                updateUI();
+            }
+        }
+
+        function changeMainResolution() {
+            if (state.mode === 'amendment') {
+                if(!confirm("Máte rozdělaný pozměňovací návrh. Chcete ho zahodit a přepnout bod?")) return;
+                state.mode = 'standard';
+            }
+            const sel = document.getElementById('resolution-select');
+            state.currentIndex = parseInt(sel.value);
+            toggleAllVotes(false);
+            updateUI();
+        }
+
+        // --- SAVING ---
 
         function saveRound() {
-            const { presentShares, yesShares } = calculateResults();
-            const currentRes = resolutions[state.currentResolutionIndex];
-            const percentage = presentShares > 0 ? (yesShares / presentShares) * 100 : 0;
-            const isPassed = percentage > currentRes.threshold;
+            const { present, votes } = calculate();
+            if (present === 0) { alert("Nelze uzavřít bez přítomných."); return; }
 
-            if (presentShares === 0) {
-                alert("Nelze uzavřít hlasování bez přítomných vlastníků.");
-                return;
+            const percent = (votes / present) * 100;
+            
+            let passed, threshold, title, type;
+
+            if (state.mode === 'amendment') {
+                threshold = state.amendment.threshold;
+                passed = percent > threshold;
+                title = `ZMĚNA: ${state.amendment.text.substring(0, 50)}...`;
+                type = 'amendment';
+            } else {
+                const res = state.resolutions[state.currentIndex];
+                threshold = res.threshold;
+                passed = percent > threshold;
+                title = res.modified ? `${res.title} (UPRAVENO)` : res.title;
+                type = 'standard';
             }
 
-            const record = {
-                time: new Date().toLocaleTimeString(),
-                title: currentRes.title,
-                present: presentShares,
-                votes: yesShares,
-                percent: percentage.toFixed(1),
-                passed: isPassed,
-                threshold: currentRes.threshold
-            };
+            // Logic: Amendment passed?
+            if (type === 'amendment' && passed) {
+                if(confirm("Pozměňovací návrh byl PŘIJAT.\n\nMám označit hlavní usnesení jako 'UPRAVENO'?")) {
+                    state.resolutions[state.currentIndex].modified = true;
+                    renderResolutionSelect();
+                }
+            }
 
-            state.history.unshift(record); // Add to top
-            renderHistory();
+            // Save to history
+            state.history.unshift({
+                time: new Date().toLocaleTimeString(),
+                title,
+                type,
+                present,
+                votes,
+                percent: percent.toFixed(1),
+                threshold,
+                passed
+            });
+
+            updateHistory();
+
+            // Reset
+            if (state.mode === 'amendment') {
+                state.mode = 'standard';
+                state.amendment = null;
+            }
             
-            // Optional: Auto-advance to next resolution
-            // if (state.currentResolutionIndex < resolutions.length - 1) {
-            //     document.getElementById('resolution-select').value = state.currentResolutionIndex + 1;
-            //     changeResolution();
-            // }
+            toggleAllVotes(false);
+            updateUI();
         }
 
-        function renderHistory() {
+        function updateHistory() {
             const list = document.getElementById('history-list');
-            if (state.history.length === 0) {
-                list.innerHTML = '<div class="p-8 text-center text-gray-400 text-sm italic" id="empty-history-msg">Zatím nebylo uzavřeno žádné hlasování.</div>';
-                return;
-            }
-
             list.innerHTML = '';
+            
             state.history.forEach(rec => {
-                const item = document.createElement('div');
-                item.className = "p-3 hover:bg-gray-50 transition";
-                item.innerHTML = `
+                const isAm = rec.type === 'amendment';
+                const row = document.createElement('div');
+                row.className = `p-3 ${isAm ? 'bg-orange-50 border-l-4 border-orange-400' : 'bg-white border-l-4 border-blue-400'}`;
+                
+                row.innerHTML = `
                     <div class="flex justify-between items-start mb-1">
                         <span class="text-xs text-gray-400 font-mono">${rec.time}</span>
-                        <span class="px-2 py-0.5 rounded text-[10px] uppercase font-bold text-white ${rec.passed ? 'bg-green-500' : 'bg-red-500'}">
+                        <span class="px-2 py-0.5 rounded text-[10px] uppercase font-bold text-white ${rec.passed ? 'bg-green-600' : 'bg-red-500'}">
                             ${rec.passed ? 'PŘIJATO' : 'NEPŘIJATO'}
                         </span>
                     </div>
-                    <div class="font-semibold text-gray-800 text-sm mb-2 leading-tight">${rec.title}</div>
-                    <div class="flex justify-between text-xs text-gray-600 bg-gray-100 p-2 rounded">
-                        <div>
-                            <span class="block text-gray-400 text-[10px] uppercase">Pro/Přít.</span>
-                            <span class="font-mono font-bold">${rec.votes}/${rec.present}</span>
-                        </div>
-                        <div class="text-right">
-                            <span class="block text-gray-400 text-[10px] uppercase">Výsledek</span>
-                            <span class="font-bold ${rec.passed ? 'text-green-600' : 'text-red-600'}">${rec.percent}%</span>
-                            <span class="text-[9px] text-gray-400">(kvórum ${rec.threshold}%)</span>
-                        </div>
+                    <div class="font-bold text-sm text-gray-800 mb-1 leading-tight">
+                        ${isAm ? '<span class="text-orange-600">POZMĚŇOVACÍ NÁVRH:</span>' : ''} ${rec.title}
+                    </div>
+                    <div class="flex justify-between text-xs text-gray-500">
+                        <span>Pro: <b>${rec.votes}</b> / Přít: ${rec.present}</span>
+                        <span><b>${rec.percent}%</b> (kvórum ${rec.threshold}%)</span>
                     </div>
                 `;
-                list.appendChild(item);
+                list.appendChild(row);
             });
         }
 
         function clearHistory() {
-            if(confirm("Opravdu smazat historii?")) {
-                state.history = [];
-                renderHistory();
+            if(confirm("Smazat historii?")) { state.history = []; updateHistory(); }
+        }
+
+        // Helper
+        function toggleModal(id) {
+            const modal = document.getElementById(id);
+            if (modal.classList.contains('opacity-0')) {
+                modal.classList.remove('opacity-0', 'pointer-events-none');
+                document.body.classList.add('modal-active');
+            } else {
+                modal.classList.add('opacity-0', 'pointer-events-none');
+                document.body.classList.remove('modal-active');
             }
         }
 
