@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hlasovací Kalkulačka SVJ</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .checkbox-lg { transform: scale(1.5); }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen pb-20">
+
+    <!-- Sticky Header with Results -->
+    <div class="sticky top-0 z-50 bg-white shadow-md border-b border-gray-200">
+        <div class="container mx-auto px-4 py-3">
+            <div class="flex flex-col md:flex-row justify-between items-center gap-2">
+                <h1 class="text-xl font-bold text-gray-800"><i class="fas fa-calculator mr-2"></i>SVJ Hlasování</h1>
+                
+                <div class="flex items-center gap-4 bg-gray-50 rounded-lg p-2 border border-gray-200 w-full md:w-auto justify-center">
+                    <div class="text-center">
+                        <div class="text-xs text-gray-500 uppercase font-bold">Hlasy</div>
+                        <div class="text-xl font-mono font-bold text-blue-600">
+                            <span id="current-votes">0</span> / 733
+                        </div>
+                    </div>
+                    <div class="h-8 w-px bg-gray-300"></div>
+                    <div class="text-center">
+                        <div class="text-xs text-gray-500 uppercase font-bold">Výsledek</div>
+                        <div id="result-badge" class="px-3 py-1 rounded-full text-white font-bold text-lg bg-red-500 min-w-[80px]">
+                            0.0 %
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Quorum Indicator -->
+            <div class="w-full bg-gray-200 h-2 mt-2 rounded-full overflow-hidden">
+                <div id="progress-bar" class="bg-red-500 h-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="container mx-auto px-4 py-6">
+        
+        <!-- Controls -->
+        <div class="flex gap-2 mb-4 justify-end">
+            <button onclick="selectAll(true)" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm shadow transition">
+                <i class="fas fa-check-double mr-1"></i> Označit vše
+            </button>
+            <button onclick="selectAll(false)" class="bg-gray-500 hover:bg-gray-600 text-white px-3 py-2 rounded text-sm shadow transition">
+                <i class="fas fa-undo mr-1"></i> Vynulovat
+            </button>
+        </div>
+
+        <!-- Table -->
+        <div class="bg-white rounded-lg shadow overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-gray-800 text-white text-sm uppercase">
+                            <th class="p-3 w-12 text-center">#</th>
+                            <th class="p-3 w-24">Jednotka</th>
+                            <th class="p-3">Vlastník</th>
+                            <th class="p-3 w-24 text-right">Podíl</th>
+                            <th class="p-3 w-24 text-center bg-blue-900">Hlasoval</th>
+                        </tr>
+                    </thead>
+                    <tbody id="owners-table" class="text-gray-700 divide-y divide-gray-200">
+                        <!-- Rows will be populated by JS -->
+                    </tbody>
+                    <tfoot class="bg-gray-50 font-bold">
+                        <tr>
+                            <td colspan="3" class="p-3 text-right text-gray-600">Celkem podíly v domě:</td>
+                            <td class="p-3 text-right">733</td>
+                            <td class="p-3"></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        <div class="mt-4 text-xs text-gray-500 text-center">
+            * Data byla seřazena podle čísla jednotky (1-16) pro snadnější orientaci.
+        </div>
+    </div>
+
+    <script>
+        // Data extracted and cleaned from the provided document
+        // Ordered by Unit Number suffix (1 to 16)
+        const owners = [
+            { id: 1, unit: "497/1", name: "Ben-Chenni Zulicha", share: 45 },
+            { id: 2, unit: "497/2", name: "Kraus Tomáš", share: 34 },
+            { id: 3, unit: "497/3", name: "SJ Hanousek Petr Ing. a Hanousková Kamila", share: 34 },
+            { id: 4, unit: "497/4", name: "Stejskalová Terezie", share: 46 },
+            { id: 5, unit: "497/5", name: "Švaříček Oldřich", share: 36 },
+            { id: 6, unit: "497/6", name: "SJ Kislenko Jan a Kislenko Zsuzsanna", share: 34 },
+            { id: 7, unit: "497/7", name: "Oleksík Zdenek", share: 69 },
+            { id: 8, unit: "497/8", name: "Horák Milan", share: 49 },
+            { id: 9, unit: "497/9", name: "Jákl Petr Ing. Ph.D.", share: 36 },
+            { id: 10, unit: "497/10", name: "Kislenko Zsuzsanna", share: 69 },
+            { id: 11, unit: "497/11", name: "Toufar Jiří", share: 34 },
+            { id: 12, unit: "497/12", name: "Bednařík Radek", share: 49 },
+            { id: 13, unit: "497/13", name: "Bohunský Radek", share: 78 },
+            { id: 14, unit: "497/14", name: "Neubauer Richard", share: 35 },
+            { id: 15, unit: "497/15", name: "Rapčanová Slavomíra", share: 35 },
+            { id: 16, unit: "497/16", name: "SJ Sláma Ladislav a Slámová Jana", share: 50 }
+        ];
+
+        const totalShares = 733;
+
+        function renderTable() {
+            const tbody = document.getElementById('owners-table');
+            tbody.innerHTML = '';
+
+            owners.forEach((owner, index) => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-blue-50 transition-colors cursor-pointer select-none";
+                tr.onclick = (e) => {
+                    // Toggle checkbox when clicking row (unless clicking directly on checkbox)
+                    if (e.target.type !== 'checkbox') {
+                        const cb = document.getElementById(`cb-${owner.id}`);
+                        cb.checked = !cb.checked;
+                        calculateVotes();
+                    }
+                };
+
+                tr.innerHTML = `
+                    <td class="p-3 text-center text-gray-500 font-mono text-sm">${index + 1}</td>
+                    <td class="p-3 font-semibold text-blue-800">${owner.unit}</td>
+                    <td class="p-3">
+                        <div class="font-medium">${owner.name}</div>
+                    </td>
+                    <td class="p-3 text-right font-mono text-gray-600">${owner.share}/733</td>
+                    <td class="p-3 text-center bg-blue-50 border-l border-blue-100">
+                        <input type="checkbox" id="cb-${owner.id}" value="${owner.share}" 
+                            class="checkbox-lg w-5 h-5 text-blue-600 rounded focus:ring-blue-500 cursor-pointer"
+                            onchange="calculateVotes()">
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function calculateVotes() {
+            let currentSum = 0;
+            const checkboxes = document.querySelectorAll('input[type="checkbox"]:checked');
+            
+            checkboxes.forEach(cb => {
+                currentSum += parseInt(cb.value);
+            });
+
+            const percentage = (currentSum / totalShares) * 100;
+            
+            // Update UI
+            document.getElementById('current-votes').textContent = currentSum;
+            
+            const badge = document.getElementById('result-badge');
+            const bar = document.getElementById('progress-bar');
+            
+            badge.textContent = percentage.toFixed(1) + ' %';
+            bar.style.width = percentage + '%';
+
+            // Visual feedback for > 50%
+            if (percentage > 50) {
+                badge.className = "px-3 py-1 rounded-full text-white font-bold text-lg bg-green-600 min-w-[80px] shadow-lg animate-pulse";
+                bar.className = "h-full transition-all duration-300 bg-green-500";
+            } else {
+                badge.className = "px-3 py-1 rounded-full text-white font-bold text-lg bg-red-500 min-w-[80px]";
+                bar.className = "h-full transition-all duration-300 bg-red-500";
+            }
+        }
+
+        function selectAll(check) {
+            const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+            checkboxes.forEach(cb => cb.checked = check);
+            calculateVotes();
+        }
+
+        // Initialize
+        renderTable();
+    </script>
+</body>
+</html>
